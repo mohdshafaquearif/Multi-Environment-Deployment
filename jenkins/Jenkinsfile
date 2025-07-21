@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "shafaque26/dockerimage"
-        DOCKERHUB_PASSWORD = credentials('dockerhub-creds')  // Your secret text credential ID here
-        DOCKER_CLI = "/usr/local/bin/docker"  // Adjust path if needed
-        CONTAINER_NAME = "my-running-container"  // Name for your running container
-        GITHUB_TOKEN=credentials('github-token')  // Your GitHub token credential ID here
+        DOCKERHUB_PASSWORD = credentials('dockerhub-creds')  // Your DockerHub credentials
+        DOCKER_CLI = "/usr/local/bin/docker"  // Docker path
+        CONTAINER_NAME = "my-running-container"  // Running container name
+        GITHUB_TOKEN = credentials('github-token')  // GitHub token credential ID
     }
 
     stages {
@@ -38,7 +38,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Run Docker Container') {
             steps {
                 echo "Running Docker container from image: ${DOCKER_IMAGE}:latest"
@@ -50,32 +50,43 @@ pipeline {
                 }
             }
         }
-        // Updating Helm values.yaml
-        stage('Update Helm values & Git Push') {
-steps {
-script {
-def appVersion = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
 
-        sh """
-        sed -i 's|tag:.*|tag: "${appVersion}"|' helm/values.yaml
-        git config user.email "mohammadshafaque.26@gmail.com"
-        git config user.name "Mohammad Shafaque Arif"
-        git remote set-url origin https:://x-ccess-token:${GITHUB_TOKEN}@github.com/mohdshafaquearif/Multi-Environment-Deployment.git
-        git add helm/values.yaml
-        git commit -m "Update image tag to ${appVersion} [CI SKIP]"
-        git push origin master
-        """
-    }
-}
-}
+        stage('Update Helm values & Git Push') {
+            steps {
+                script {
+                    def appVersion = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+
+                    sh """
+                        # Detect sed version and use correct syntax
+                        if sed --version >/dev/null 2>&1; then
+                            # GNU sed (Linux)
+                            sed -i "s|tag:.*|tag: \\"${appVersion}\\"|" helm/values.yaml
+                        else
+                            # BSD sed (macOS)
+                            sed -i '' "s|tag:.*|tag: \\"${appVersion}\\"|" helm/values.yaml
+                        fi
+
+                        git config user.email "mohammadshafaque.26@gmail.com"
+                        git config user.name "Mohammad Shafaque Arif"
+
+                        # Correct GitHub URL (no double colon)
+                        git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/mohdshafaquearif/Multi-Environment-Deployment.git
+
+                        git add helm/values.yaml || true
+                        git commit -m "Update image tag to ${appVersion} [CI SKIP]" || echo "No changes to commit"
+                        git push origin master
+                    """
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo " Docker image pushed and container running successfully: ${DOCKER_IMAGE}:latest"
+            echo "Docker image pushed, Helm values updated, and container running successfully."
         }
         failure {
-            echo " Pipeline failed. Please check logs."
+            echo "Pipeline failed. Please check logs."
         }
     }
 }
