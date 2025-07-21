@@ -6,6 +6,7 @@ pipeline {
         DOCKERHUB_PASSWORD = credentials('dockerhub-creds')  // Your secret text credential ID here
         DOCKER_CLI = "/usr/local/bin/docker"  // Adjust path if needed
         CONTAINER_NAME = "my-running-container"  // Name for your running container
+        GITHUB_TOKEN=credentials('github-token')  // Your GitHub token credential ID here
     }
 
     stages {
@@ -59,6 +60,7 @@ def appVersion = sh(script: "git rev-parse --short HEAD", returnStdout: true).tr
         sed -i 's|tag:.*|tag: "${appVersion}"|' helm/values.yaml
         git config user.email "mohammadshafaque.26@gmail.com"
         git config user.name "Mohammad Shafaque Arif"
+        git remote set-url origin https:://x-ccess-token:${GITHUB_TOKEN}@github.com/mohdshafaquearif/Multi-Environment-Deployment.git
         git add helm/values.yaml
         git commit -m "Update image tag to ${appVersion} [CI SKIP]"
         git push origin master
