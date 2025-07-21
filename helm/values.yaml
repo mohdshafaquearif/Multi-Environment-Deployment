@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: shafaque26/dockerimage
-  tag: "395ee65"
+  tag: "latest"
   pullPolicy: Always
 
 service:
