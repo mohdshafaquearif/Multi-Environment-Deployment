@@ -5,6 +5,7 @@ pipeline {
         DOCKER_IMAGE = "shafaque26/dockerimage"
         DOCKERHUB_PASSWORD = credentials('dockerhub-creds')  // Your secret text credential ID here
         DOCKER_CLI = "/usr/local/bin/docker"  // Adjust path if needed
+        CONTAINER_NAME = "my-running-container"  // Name for your running container
     }
 
     stages {
@@ -26,7 +27,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                echo " Logging in to DockerHub and pushing image..."
+                echo "Logging in to DockerHub and pushing image..."
                 script {
                     sh """
                         echo '${DOCKERHUB_PASSWORD}' | ${DOCKER_CLI} login --username shafaque26 --password-stdin
@@ -36,11 +37,23 @@ pipeline {
                 }
             }
         }
+        
+        stage('Run Docker Container') {
+            steps {
+                echo "Running Docker container from image: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                script {
+                    sh """
+                        ${DOCKER_CLI} rm -f ${CONTAINER_NAME} || true
+                        ${DOCKER_CLI} run -d --name ${CONTAINER_NAME} -p 3000:3000 ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo "Docker image pushed successfully: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+            echo " Docker image pushed and container running successfully: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
         }
         failure {
             echo " Pipeline failed. Please check logs."
